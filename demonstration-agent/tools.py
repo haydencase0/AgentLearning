@@ -43,6 +43,31 @@ def read_safe_file(path: str) -> str:
 
     return target.read_text(encoding="utf-8")
 
+def read_personal_files() -> str:
+    """Read text files from the designated personal_files/ folder.
+
+    The tool intentionally takes no path argument. The agent can read only
+    files inside personal_files/, not arbitrary files in the project.
+    """
+    personal_folder = _resolve_safe("personal_files")
+    if not personal_folder.is_dir():
+        raise PermissionError("Personal files folder not found.")
+
+    supported_extensions = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
+    documents = []
+
+    for target in sorted(personal_folder.rglob("*")):
+        if not target.is_file() or target.suffix.lower() not in supported_extensions:
+            continue
+        if not _is_allowed(target.resolve()):
+            continue
+
+        relative_name = target.relative_to(personal_folder)
+        contents = target.read_text(encoding="utf-8")
+        documents.append(f"--- {relative_name} ---\n{contents}")
+
+    return "\n\n".join(documents) or "(no personal files found)"
+
 
 def list_directory(path: str = ".") -> str:
     """List the contents of a directory in the project. Subdirectories end with "/".

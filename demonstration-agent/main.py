@@ -21,7 +21,7 @@ from rich.markdown import Markdown
 
 console = Console()
 
-from tools import list_directory, read_safe_file
+from tools import list_directory, read_personal_files, read_safe_file
 
 
 MCP_CONFIG = {
@@ -29,6 +29,9 @@ MCP_CONFIG = {
         "arxiv": {
             "command": "uvx",
             "args": ["arxiv-mcp-server"],
+        },
+        "langchain_docs": {
+            "url": "https://docs.langchain.com/mcp",
         },
     }
 }
@@ -61,7 +64,7 @@ async def _get_response(prompt: str) -> str:
         mcp_tools = await adapter.list_tools()
         agent = create_agent(
             model="google_genai:gemini-flash-lite-latest",
-            tools=[read_safe_file, list_directory, *mcp_tools],
+            tools=[read_safe_file, list_directory, read_personal_files, *mcp_tools],
             checkpointer=InMemorySaver(),
             system_prompt=SYSTEM_PROMPT,
         )
