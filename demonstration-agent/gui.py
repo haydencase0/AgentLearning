@@ -1,6 +1,7 @@
 import threading
 import tkinter as tk
 from collections.abc import Callable
+from tkinter import font as tkfont
 from tkinter import ttk
 
 
@@ -13,7 +14,21 @@ class AgentGui:
         self.root.title("Agent Interaction")
         self.root.geometry("760x560")
         self.root.minsize(520, 400)
+        self._configure_fonts()
         self._build_widgets()
+
+    def _configure_fonts(self) -> None:
+        available_fonts = set(tkfont.families(self.root))
+        self.font_family = (
+            "Segoe UI" if "Segoe UI" in available_fonts
+            else "Arial" if "Arial" in available_fonts
+            else "TkDefaultFont"
+        )
+
+        style = ttk.Style(self.root)
+        style.configure("TLabel", font=(self.font_family, 10))
+        style.configure("Title.TLabel", font=(self.font_family, 17, "bold"))
+        style.configure("TButton", font=(self.font_family, 10))
 
     def _build_widgets(self) -> None:
         self.root.columnconfigure(0, weight=1)
@@ -22,7 +37,7 @@ class AgentGui:
         header = ttk.Frame(self.root, padding=(16, 14, 16, 8))
         header.grid(row=0, column=0, sticky="ew")
         ttk.Label(
-            header, text="Agent Interaction", font=("TkDefaultFont", 16, "bold")
+            header, text="Agent Interaction", style="Title.TLabel"
         ).grid(row=0, column=0, sticky="w")
         ttk.Label(
             header, text="Ask the agent questions about files in this project."
@@ -47,6 +62,7 @@ class AgentGui:
             borderwidth=1,
             padx=8,
             pady=8,
+            font=(self.font_family, 11),
         )
         self.response_area.grid(row=0, column=0, sticky="nsew")
         self.response_area.tag_configure(
@@ -92,6 +108,7 @@ class AgentGui:
             borderwidth=1,
             padx=8,
             pady=8,
+            font=(self.font_family, 11),
         )
         self.prompt_box.grid(row=0, column=0, sticky="ew")
         self.prompt_box.bind("<Return>", self._send_on_enter)

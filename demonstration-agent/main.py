@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import os
-import uuid
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
@@ -10,17 +9,22 @@ from langgraph.checkpoint.memory import InMemorySaver
 from rich.console import Console
 from rich.markdown import Markdown
 
-from gui import run_gui
-from tools import list_directory, read_personal_files, read_safe_file
-
-
 load_dotenv()
 
 if not os.getenv("GOOGLE_API_KEY") and os.getenv("GEMINI_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
 
+from gui import run_gui
+from subagents import translate_to_japanese
+from tools import list_directory, read_personal_files, read_safe_file
+
 
 console = Console()
+
+# Keep these objects alive and reuse the same thread so the agent can retain
+# conversation history for the lifetime of the application.
+CHECKPOINTER = InMemorySaver()
+THREAD_CONFIG = {"configurable": {"thread_id": "main-chat"}}
 
 MCP_CONFIG = {
     "mcpServers": {
@@ -40,6 +44,8 @@ SYSTEM_PROMPT = (
     "End each sentence like an anime character, using sounds such as "
     "'nano', 'desu', or 'noja'. You roleplay as an anime main character. "
     "Use the available tools when they can provide accurate information."
+    " Use translate_to_japanese when the user asks for Japanese translation, "
+    "Japanese corrections, kanji readings, or kanji explanations."
 )
 
 
@@ -63,13 +69,19 @@ async def _get_response(prompt: str) -> str:
         mcp_tools = await adapter.list_tools()
         agent = create_agent(
             model="google_genai:gemini-flash-lite-latest",
-            tools=[read_safe_file, list_directory, read_personal_files, *mcp_tools],
-            checkpointer=InMemorySaver(),
+            tools=[
+                read_safe_file,
+                list_directory,
+                read_personal_files,
+                translate_to_japanese,
+                *mcp_tools,
+            ],
+            checkpointer=CHECKPOINTER,
             system_prompt=SYSTEM_PROMPT,
         )
         result = await agent.ainvoke(
             {"messages": [{"role": "user", "content": prompt}]},
-            {"configurable": {"thread_id": str(uuid.uuid4())}},
+            THREAD_CONFIG,
         )
         return _get_text_response(result)
 
